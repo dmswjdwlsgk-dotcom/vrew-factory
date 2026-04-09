@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vrew Factory</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --primary: #5cc4a1;
+            --primary-dark: #3fa882;
+            --primary-light: #eaf7f2;
+            --bg: #f4fbf8;
+            --text: #1e3a2f;
+            --text-muted: #6a9282;
+            --border: #c2e8d8;
+            --white: #ffffff;
+            --shadow: 0 2px 16px rgba(92,196,161,0.13);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Gothic Neo', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 32px 16px;
+        }
+
+        .container {
+            max-width: 740px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+        header h1 {
+            font-size: 1.9rem;
+            font-weight: 800;
+            color: var(--primary-dark);
+            letter-spacing: -0.5px;
+        }
+        header p {
+            color: var(--text-muted);
+            margin-top: 8px;
+            font-size: 0.95rem;
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: 18px;
+            padding: 24px;
+            margin-bottom: 18px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+        .card h2 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .step-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            font-size: 0.72rem;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        /* Drop zones */
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 28px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            background: var(--primary-light);
+            user-select: none;
+        }
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: var(--primary);
+            background: #d6f3ea;
+        }
+        .drop-zone .dz-icon { font-size: 2.2rem; margin-bottom: 10px; }
+        .drop-zone .dz-main {
+            font-weight: 600;
+            color: var(--primary-dark);
+            font-size: 0.92rem;
+        }
+        .drop-zone .dz-sub {
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            margin-top: 4px;
+        }
+        input[type="file"] { display: none; }
+
+        .file-badge {
+            display: none;
+            margin-top: 12px;
+            padding: 10px 14px;
+            background: var(--primary-light);
+            border-radius: 9px;
+            font-size: 0.83rem;
+            color: var(--text);
+            align-items: center;
+            gap: 8px;
+            border: 1px solid var(--border);
+        }
+        .file-badge.visible { display: flex; }
+        .file-badge .tick { color: var(--primary); font-weight: 800; font-size: 1rem; }
+
+        .image-list {
+            display: none;
+            margin-top: 12px;
+            max-height: 160px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+        .image-list.visible { display: block; }
+        .img-row {
+            padding: 7px 12px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            border-bottom: 1px solid #eef7f3;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .img-row:last-child { border-bottom: none; }
+        .img-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--primary);
+            flex-shrink: 0;
+        }
+
+        /* Animation grid */
+        .anim-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+        .anim-btn {
+            padding: 11px 6px;
+            border: 2px solid var(--border);
+            border-radius: 11px;
+            background: var(--white);
+            cursor: pointer;
+            text-align: center;
+            transition: border-color 0.15s, background 0.15s, color 0.15s;
+            font-size: 0.77rem;
+            color: var(--text);
+            font-family: inherit;
+        }
+        .anim-btn:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+        .anim-btn.active {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+            font-weight: 700;
+        }
+        .anim-btn .ai { font-size: 1.15rem; display: block; margin-bottom: 5px; }
+        .anim-btn.span2 { grid-column: span 2; }
+
+        /* Stats */
+        .stats {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .stat {
+            flex: 1;
+            text-align: center;
+            padding: 12px 8px;
+            background: var(--primary-light);
+            border-radius: 11px;
+            border: 1px solid var(--border);
+        }
+        .stat-n {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--primary-dark);
+            line-height: 1;
+        }
+        .stat-l {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+
+        /* Generate button */
+        .gen-btn {
+            width: 100%;
+            padding: 15px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background 0.2s, transform 0.15s, box-shadow 0.15s;
+            letter-spacing: -0.2px;
+        }
+        .gen-btn:hover:not(:disabled) {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(92,196,161,0.35);
+        }
+        .gen-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        /* Progress */
+        .prog-wrap {
+            display: none;
+            margin-top: 14px;
+            background: var(--border);
+            border-radius: 8px;
+            height: 7px;
+            overflow: hidden;
+        }
+        .prog-wrap.visible { display: block; }
+        .prog-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+            border-radius: 8px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        /* Log */
+        .log-card { display: none; }
+        .log-card.visible { display: block; }
+        .log-box {
+            background: #152822;
+            color: #9de8c4;
+            border-radius: 11px;
+            padding: 16px;
+            font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+            font-size: 0.78rem;
+            max-height: 280px;
+            overflow-y: auto;
+            line-height: 1.65;
+        }
+        .ll { margin-bottom: 1px; }
+        .ll.s { color: #5cc4a1; }
+        .ll.w { color: #f0c050; }
+        .ll.e { color: #f07070; }
+        .ll.i { color: #70b0f0; }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <header>
+        <h1>🎬 Vrew Factory</h1>
+        <p>이미지 파일명으로 Vrew 자막을 매칭해 자동 삽입 + Ken Burns 애니메이션 적용</p>
+    </header>
+
+    <!-- Step 1 -->
+    <div class="card">
+        <h2><span class="step-badge">1</span> .vrew 파일 업로드</h2>
+        <div class="drop-zone" id="vrewZone">
+            <div class="dz-icon">📁</div>
+            <div class="dz-main">클릭하거나 파일을 드래그하세요</div>
+            <div class="dz-sub">.vrew 파일 (ZIP 형식)</div>
+        </div>
+        <input type="file" id="vrewInput" accept=".vrew">
+        <div class="file-badge" id="vrewBadge">
+            <span class="tick">✓</span>
+            <span id="vrewName"></span>
+        </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="card">
+        <h2><span class="step-badge">2</span> 이미지 파일 업로드</h2>
+        <div class="drop-zone" id="imgZone">
+            <div class="dz-icon">🖼️</div>
+            <div class="dz-main">클릭하거나 파일을 드래그하세요</div>
+            <div class="dz-sub">여러 이미지 선택 가능 · jpg, png, gif, webp</div>
+        </div>
+        <input type="file" id="imgInput" accept="image/*" multiple>
+        <div class="image-list" id="imgList"></div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="card">
+        <h2><span class="step-badge">3</span> Ken Burns 애니메이션 효과 선택</h2>
+        <div class="anim-grid">
+            <button class="anim-btn active" data-fx="zoom-in">
+                <span class="ai">🔍</span>확대<br><small>Zoom In</small>
+            </button>
+            <button class="anim-btn" data-fx="zoom-out">
+                <span class="ai">🔎</span>축소<br><small>Zoom Out</small>
+            </button>
+            <button class="anim-btn" data-fx="tilt-up">
+                <span class="ai">⬆️</span>틸업<br><small>Tilt Up</small>
+            </button>
+            <button class="anim-btn" data-fx="tilt-down">
+                <span class="ai">⬇️</span>틸다운<br><small>Tilt Down</small>
+            </button>
+            <button class="anim-btn" data-fx="pan-right">
+                <span class="ai">➡️</span>우패닝<br><small>Pan Right</small>
+            </button>
+            <button class="anim-btn" data-fx="pan-left">
+                <span class="ai">⬅️</span>좌패닝<br><small>Pan Left</small>
+            </button>
+            <button class="anim-btn span2" data-fx="random">
+                <span class="ai">🎲</span>랜덤 (Random)
+            </button>
+            <button class="anim-btn span2" data-fx="none">
+                <span class="ai">⏹️</span>무빙없음 (Static)
+            </button>
+        </div>
+    </div>
+
+    <!-- Step 4 generate -->
+    <div class="card">
+        <div class="stats hidden" id="statsRow">
+            <div class="stat"><div class="stat-n" id="sClips">0</div><div class="stat-l">전체 클립</div></div>
+            <div class="stat"><div class="stat-n" id="sImages">0</div><div class="stat-l">이미지 파일</div></div>
+            <div class="stat"><div class="stat-n" id="sMatched">0</div><div class="stat-l">매칭 성공</div></div>
+        </div>
+        <button class="gen-btn" id="genBtn" disabled>🚀 프로젝트 생성하기</button>
+        <div class="prog-wrap" id="progWrap">
+            <div class="prog-bar" id="progBar"></div>
+        </div>
+    </div>
+
+    <!-- Log -->
+    <div class="card log-card" id="logCard">
+        <h2>📋 처리 로그</h2>
+        <div class="log-box" id="logBox"></div>
+    </div>
+
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let vrewFile = null;
+let imageFiles = [];
+let selectedFx = 'zoom-in';
+
+// ── Ken Burns presets ──────────────────────────────────────────────────────
+const KB = {
+    'zoom-in':   { from: { scale: 0.77, centerX: 0.5,  centerY: 0.5  }, to: { scale: 0.63, centerX: 0.5,  centerY: 0.5  } },
+    'zoom-out':  { from: { scale: 0.63, centerX: 0.5,  centerY: 0.5  }, to: { scale: 0.77, centerX: 0.5,  centerY: 0.5  } },
+    'tilt-up':   { from: { scale: 0.7,  centerX: 0.5,  centerY: 0.42 }, to: { scale: 0.7,  centerX: 0.5,  centerY: 0.58 } },
+    'tilt-down': { from: { scale: 0.7,  centerX: 0.5,  centerY: 0.58 }, to: { scale: 0.7,  centerX: 0.5,  centerY: 0.42 } },
+    'pan-right': { from: { scale: 0.7,  centerX: 0.58, centerY: 0.5  }, to: { scale: 0.7,  centerX: 0.42, centerY: 0.5  } },
+    'pan-left':  { from: { scale: 0.7,  centerX: 0.42, centerY: 0.5  }, to: { scale: 0.7,  centerX: 0.58, centerY: 0.5  } },
+    'none':      { from: { scale: 0.7,  centerX: 0.5,  centerY: 0.5  }, to: { scale: 0.7,  centerX: 0.5,  centerY: 0.5  } },
+};
+const FX_KEYS = Object.keys(KB);
+
+function pickFx(name) {
+    if (name === 'random') return KB[FX_KEYS[Math.floor(Math.random() * FX_KEYS.length)]];
+    return KB[name];
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+// 한글/영문만 남김, 소문자 변환
+// macOS 파일명은 NFD(분해형)로 저장되므로 NFC로 정규화 먼저 수행
+function normalize(str) {
+    return str
+        .normalize('NFC')
+        .replace(/[^\uAC00-\uD7A3\u1100-\u11FF\u3130-\u318F\uA960-\uA97F\uD7B0-\uD7FFa-zA-Z]/g, '')
+        .toLowerCase();
+}
+
+// 숫자 prefix 감지: "S001_", "S01_", "01_", "001_", "1_" 등 모두 지원
+function getSNumber(filename) {
+    const m = filename.normalize('NFC').match(/^[A-Za-z]*(\d+)[_\s\-\.]/);
+    return m ? parseInt(m[1], 10) : null;
+}
+
+// 파일명에서 매칭에 사용할 텍스트 추출
+// 숫자 prefix 및 구분자 이후 텍스트, "..." 앞까지만 사용
+function getMatchText(filename) {
+    const nfc = filename.normalize('NFC');
+    // 앞의 숫자(+알파벳) prefix 제거: "S001_", "01_", "001 " 등
+    const afterNum = nfc.replace(/^[A-Za-z]*\d+[_\s\-\.]+/, '');
+    const beforeDots = afterNum.split('...')[0];
+    return normalize(beforeDots.replace(/\.[^/.]+$/, ''));
+}
+
+// 유연 매칭: 파일명 키의 한글 10자+ 부분문자열이 자막에 포함되면 매칭
+// minLen=10으로 비슷한 문장 간 오매칭 방지
+// SLIDE_MIN=10: 슬라이딩 창 최소 10자 — 짧은 공통 구절("에서돌아가셨다" 등) 오매칭 방지
+const SLIDE_MIN = 10;
+function flexMatch(key, normText, minLen = 10) {
+    if (!normText || normText.length < 2) return false;
+    const koreanOnly = key.replace(/[a-z]+/g, '');
+    // 1차: 클립 텍스트가 짧으면 (< minLen) 파일명 앞부분 일치로 체크 (최소 5자)
+    if (normText.length >= 5 && normText.length < minLen) {
+        return koreanOnly.startsWith(normText);
+    }
+    // 2차: 직접 포함
+    // normText.includes(key): 클립 텍스트가 이미지 키를 포함 — minLen 이상
+    if (normText.length >= minLen && normText.includes(key)) return true;
+    // key.includes(normText): 이미지 키가 클립 텍스트를 포함 — 반드시 10자+ (짧은 단어 오매칭 방지)
+    if (normText.length >= 10 && key.includes(normText)) return true;
+    // 3차: 슬라이딩 매칭 — 창 크기 최소 SLIDE_MIN(10)자 고정 (공통 단문구 오매칭 방지)
+    const effectiveMin = Math.max(SLIDE_MIN, Math.min(minLen, Math.max(5, Math.floor(koreanOnly.length * 0.6))));
+    const maxLen = Math.min(koreanOnly.length, normText.length, 20);
+    for (let len = maxLen; len >= effectiveMin; len--) {
+        for (let s = 0; s + len <= koreanOnly.length; s++) {
+            if (normText.includes(koreanOnly.slice(s, s + len))) return true;
+        }
+    }
+    // 4차: 오타 허용 근접 매칭 — 길이 유사 + 교체 오류 2자 이내 (파일명 오타 대응)
+    if (normText.length >= 8 && Math.abs(koreanOnly.length - normText.length) <= 2) {
+        const longer  = koreanOnly.length >= normText.length ? koreanOnly : normText;
+        const shorter = koreanOnly.length >= normText.length ? normText   : koreanOnly;
+        let mismatches = 0, i = 0, j = 0;
+        while (i < longer.length && j < shorter.length) {
+            if (longer[i] === shorter[j]) { i++; j++; }
+            else { mismatches++; if (mismatches > 2) break; i++; j++; }
+        }
+        mismatches += (longer.length - i) + (shorter.length - j);
+        if (mismatches <= 2) return true;
+    }
+    return false;
+}
+
+// 정렬 전용 엄격 매칭: startsWith 없음 — 공통 접두사 이미지들의 첫 매칭 클립 충돌 방지
+function strictFlexMatch(key, normText, minLen = 10) {
+    if (!normText || normText.length < 2) return false;
+    const koreanOnly = key.replace(/[a-z]+/g, '');
+    if (normText.length >= minLen && normText.includes(key)) return true;
+    if (normText.length >= 10 && key.includes(normText)) return true;
+    const effectiveMin = Math.max(SLIDE_MIN, Math.min(minLen, Math.max(5, Math.floor(koreanOnly.length * 0.6))));
+    const maxLen = Math.min(koreanOnly.length, normText.length, 20);
+    for (let len = maxLen; len >= effectiveMin; len--) {
+        for (let s = 0; s + len <= koreanOnly.length; s++) {
+            if (normText.includes(koreanOnly.slice(s, s + len))) return true;
+        }
+    }
+    // 오타 허용 근접 매칭 (strictFlexMatch에도 적용)
+    if (normText.length >= 8 && Math.abs(koreanOnly.length - normText.length) <= 2) {
+        const longer  = koreanOnly.length >= normText.length ? koreanOnly : normText;
+        const shorter = koreanOnly.length >= normText.length ? normText   : koreanOnly;
+        let mismatches = 0, i = 0, j = 0;
+        while (i < longer.length && j < shorter.length) {
+            if (longer[i] === shorter[j]) { i++; j++; }
+            else { mismatches++; if (mismatches > 2) break; i++; j++; }
+        }
+        mismatches += (longer.length - i) + (shorter.length - j);
+        if (mismatches <= 2) return true;
+    }
+    return false;
+}
+
+
+function stem(filename) {
+    return filename.replace(/\.[^/.]+$/, '');
+}
+
+function uuid4() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+}
+
+// ── Logging ────────────────────────────────────────────────────────────────
+function log(msg, type = '') {
+    const box = document.getElementById('logBox');
+    const el = document.createElement('div');
+    el.className = 'll ' + type;
+    const t = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+    el.textContent = `[${t}] ${msg}`;
+    box.appendChild(el);
+    box.scrollTop = box.scrollHeight;
+}
+
+function setProgress(pct) {
+    document.getElementById('progBar').style.width = pct + '%';
+}
+
+// ── UI helpers ─────────────────────────────────────────────────────────────
+function checkReady() {
+    document.getElementById('genBtn').disabled = !(vrewFile && imageFiles.length > 0);
+}
+
+function setupDrop(zoneId, inputId, handler) {
+    const zone = document.getElementById(zoneId);
+    const inp  = document.getElementById(inputId);
+    zone.addEventListener('click', () => inp.click());
+    zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('drag-over'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+    zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('drag-over'); handler(e.dataTransfer.files); });
+    inp.addEventListener('change', e => handler(e.target.files));
+}
+
+// ── Drop zone: .vrew ───────────────────────────────────────────────────────
+setupDrop('vrewZone', 'vrewInput', files => {
+    const f = Array.from(files).find(f => f.name.toLowerCase().endsWith('.vrew'));
+    if (!f) { alert('.vrew 파일을 선택하세요'); return; }
+    vrewFile = f;
+    document.getElementById('vrewName').textContent = `${f.name}  (${(f.size/1024).toFixed(1)} KB)`;
+    document.getElementById('vrewBadge').classList.add('visible');
+    checkReady();
+});
+
+// ── Drop zone: images ──────────────────────────────────────────────────────
+setupDrop('imgZone', 'imgInput', files => {
+    const imgs = Array.from(files).filter(f => f.type.startsWith('image/'));
+    if (!imgs.length) { alert('이미지 파일을 선택하세요'); return; }
+    imageFiles = imgs;
+    const list = document.getElementById('imgList');
+    list.innerHTML = '';
+    imgs.forEach(f => {
+        const row = document.createElement('div');
+        row.className = 'img-row';
+        row.innerHTML = `<div class="img-dot"></div><span>${f.name}</span>`;
+        list.appendChild(row);
+    });
+    list.classList.add('visible');
+    checkReady();
+});
+
+// ── Animation buttons ──────────────────────────────────────────────────────
+document.querySelectorAll('.anim-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.anim-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedFx = btn.dataset.fx;
+    });
+});
+
+// ── Extract clips ──────────────────────────────────────────────────────────
+function extractClips(project) {
+    const clips = [];
+    // transcript.scenes[].clips
+    if (project.transcript?.scenes) {
+        for (const scene of project.transcript.scenes) {
+            if (Array.isArray(scene.clips)) clips.push(...scene.clips);
+        }
+    }
+    // transcript.clips (flat)
+    if (project.transcript?.clips && Array.isArray(project.transcript.clips)) {
+        clips.push(...project.transcript.clips);
+    }
+    return clips;
+}
+
+// ── Get caption text from clip ─────────────────────────────────────────────
+// captions[0].text = [{insert: "텍스트"}, ...] 구조
+function getClipText(clip) {
+    if (clip.captions?.length && clip.captions[0]?.text) {
+        const raw = clip.captions[0].text;
+        if (Array.isArray(raw)) {
+            return raw.map(t => t.insert || '').join('').trim();
+        }
+        if (typeof raw === 'string') return raw.trim();
+    }
+    if (clip.words?.length) {
+        return clip.words.map(w => w.text || w.insert || w.word || '').join('').trim();
+    }
+    return '';
+}
+
+// ── Main generate ──────────────────────────────────────────────────────────
+async function generate() {
+    const btn = document.getElementById('genBtn');
+    btn.disabled = true;
+    btn.textContent = '처리 중…';
+
+    document.getElementById('logCard').classList.add('visible');
+    document.getElementById('progWrap').classList.add('visible');
+    document.getElementById('logBox').innerHTML = '';
+    setProgress(0);
+
+    log('처리 시작', 'i');
+
+    try {
+        // 1. Load .vrew (ZIP)
+        log('.vrew 파일 읽는 중…', 'i');
+        const buf = await vrewFile.arrayBuffer();
+        const zip = await JSZip.loadAsync(buf);
+        setProgress(10);
+
+        // 2. Parse project.json
+        const pf = zip.file('project.json');
+        if (!pf) throw new Error('project.json을 찾을 수 없습니다');
+        const project = JSON.parse(await pf.async('string'));
+        log('project.json 파싱 완료', 's');
+
+        // Log top-level keys for debugging
+        log('project.json 키: ' + Object.keys(project).join(', '), 'i');
+        setProgress(15);
+
+        // 3. Extract clips
+        const clips = extractClips(project);
+        log(`클립 ${clips.length}개 발견`, clips.length ? 's' : 'w');
+        if (!clips.length) throw new Error('클립을 찾을 수 없습니다. project.json 구조를 확인하세요.');
+
+        document.getElementById('sClips').textContent = clips.length;
+        document.getElementById('sImages').textContent = imageFiles.length;
+        document.getElementById('statsRow').classList.remove('hidden');
+
+        setProgress(20);
+
+        // 4. Build image lookup map + 순서 결정
+        // S-number 방식 감지: 파일 중 하나라도 숫자 prefix면 순서 기반 매칭
+        const hasSnums = imageFiles.some(f => getSNumber(f.name) !== null);
+        let sortedImages = [...imageFiles];
+
+        // 클립 텍스트 미리 정규화 (순서 계산에 사용)
+        const clipNorms = clips.map(c => {
+            const t = getClipText(c);
+            return normalize(t);
+        });
+
+        if (hasSnums) {
+            // S번호 순서로 정렬
+            sortedImages.sort((a, b) => (getSNumber(a.name) ?? 9999) - (getSNumber(b.name) ?? 9999));
+            log(`S번호 감지됨 → 순서 기반 매칭 모드 (${sortedImages.length}장)`, 'i');
+        } else {
+            // 번호 없음: 각 이미지가 처음 매칭되는 클립 위치를 찾아 그 순서로 정렬
+            // 엄격 매칭(startsWith 없음) 우선 → 공통 접두사 이미지 충돌 방지
+            // 엄격 매칭 실패 시 flexMatch(startsWith 포함) fallback
+            const firstMatchIdx = sortedImages.map(f => {
+                const key = normalize(stem(f.name));
+                for (let ci = 0; ci < clipNorms.length; ci++) {
+                    if (clipNorms[ci] && strictFlexMatch(key, clipNorms[ci], 10)) return ci;
+                }
+                // fallback: startsWith 허용 (10자 미만 클립 텍스트 대응)
+                for (let ci = 0; ci < clipNorms.length; ci++) {
+                    if (clipNorms[ci] && flexMatch(key, clipNorms[ci], 10)) return ci;
+                }
+                return Infinity;
+            });
+            // 첫 매칭 클립 순으로 정렬 (같으면 원래 업로드 순서 유지)
+            sortedImages = sortedImages
+                .map((f, i) => ({ f, idx: firstMatchIdx[i] }))
+                .sort((a, b) => a.idx !== b.idx ? a.idx - b.idx : 0)
+                .map(x => x.f);
+            log(`텍스트 매칭 → 10자+ 정밀 매칭 후 첫 등장 순으로 자동 정렬 (${sortedImages.length}장)`, 'i');
+        }
+
+        const imgMap = new Map();
+        for (const f of sortedImages) {
+            const key = hasSnums ? getMatchText(f.name) : normalize(stem(f.name));
+            if (key) imgMap.set(key, f);
+            log(`이미지 등록: "${f.name}" → 키 "${key}"`, key ? 'i' : 'w');
+        }
+
+        // 5. Prepare structures
+        if (!project.props)               project.props = {};
+        if (!project.props.assets)        project.props.assets = {};
+        if (!project.props.tracks)        project.props.tracks = {};
+        if (!Array.isArray(project.files)) project.files = [];
+
+        // v16: props.tracks 존재 여부로 버전 감지
+        const isV16 = project.version >= 16;
+        // 프로젝트에서 비율 자동 감지 (9:16 쇼츠 = 0.5625, 16:9 = 1.7778)
+        const videoRatio = project.props?.videoRatio || (16 / 9);
+        log(`Vrew 파일 버전: ${project.version} | 비율: ${videoRatio < 1 ? '9:16 세로(쇼츠)' : '16:9 가로'}`, 'i');
+
+        // zIndex: 기존 tracks 중 최대값 + 1
+        const existingZIndexes = Object.values(project.props.tracks).map(t => t.zIndex || 0);
+        let zIndex = existingZIndexes.length ? Math.max(...existingZIndexes) + 1 : 0;
+
+        // 이미 로드한 이미지 버퍼 캐시 (fill-forward 시 재사용)
+        const imgBufCache = new Map();
+
+        setProgress(25);
+
+        // 6. Match & insert
+        let matchCount  = 0;
+        let lastFile    = null;  // fill-forward: 마지막 매칭 이미지
+        let lastAssetId = null;  // 같은 이미지 구간은 assetId 공유
+
+        // 모든 이미지를 순서 기반으로 처리 (S번호 유무 무관)
+        // 각 이미지의 시작 클립을 순서대로 찾고, 다음 이미지는 반드시 그 이후 클립에서만 탐색
+        // 번호 있음: 원래 5자 매칭 / 번호 없음: 10자 정밀 매칭
+        const matchMinLen = hasSnums ? 5 : 10;
+        const imgEntries = [...imgMap.entries()]; // [key, file] 정렬된 순서
+        const sNumClipBoundaries = [];
+        let searchFrom = 0;
+        for (const [key, file] of imgEntries) {
+            let found = -1;
+            for (let ci = searchFrom; ci < clips.length; ci++) {
+                if (clipNorms[ci] && flexMatch(key, clipNorms[ci], matchMinLen)) {
+                    found = ci;
+                    break;
+                }
+            }
+            if (found >= 0) {
+                sNumClipBoundaries.push({ file, startClipIdx: found });
+                searchFrom = found + 1;
+                log(`${file.name.slice(0,40)} → 클립 #${found+1}부터`, 's');
+            } else {
+                // 매칭 실패 → 순서 유지하여 직전 이후 클립에 배치
+                sNumClipBoundaries.push({ file, startClipIdx: searchFrom });
+                log(`${file.name.slice(0,40)} → 매칭 실패, 클립 #${searchFrom+1}에 순서 배치`, 'w');
+                searchFrom++;
+            }
+        }
+        matchCount = sNumClipBoundaries.length;
+
+        for (let i = 0; i < clips.length; i++) {
+            const clip = clips[i];
+            const text = getClipText(clip);
+            const normText = normalize(text);
+
+            setProgress(25 + Math.round((i / clips.length) * 60));
+
+            if (!text) {
+                log(`클립 #${i + 1}: 자막 없음, 건너뜀`, 'w');
+                continue;
+            }
+
+            // 경계 기반으로 어느 이미지를 써야 할지 결정 (S번호/텍스트 공통)
+            // 시작인덱스 ≤ i 인 것 중 가장 마지막 이미지
+            let matchedFile = null;
+            for (const b of sNumClipBoundaries) {
+                if (b.startClipIdx <= i) matchedFile = b.file;
+                else break;
+            }
+
+            const isNewImage = matchedFile !== lastFile;
+
+            if (!matchedFile) {
+                if (lastFile) {
+                    matchedFile = lastFile;
+                    log(`클립 #${i + 1}: fill-forward → "${lastFile.name}"`, 'i');
+                } else {
+                    log(`클립 #${i + 1}: "${text.substring(0, 30)}" → 매칭 없음`, 'w');
+                    continue;
+                }
+            } else {
+                if (isNewImage) {
+                    lastFile    = matchedFile;
+                    lastAssetId = null; // 새 이미지 → 새 asset 생성
+                }
+            }
+
+            // fill-forward: 이미 asset 만들었으면 assetId 재사용
+            if (lastAssetId && matchedFile === lastFile) {
+                clip.assetIds = clip.assetIds || [];
+                if (!clip.assetIds.includes(lastAssetId)) clip.assetIds.push(lastAssetId);
+                continue;
+            }
+
+            // 새 이미지 → asset 생성
+            if (!imgBufCache.has(matchedFile.name)) {
+                imgBufCache.set(matchedFile.name, await matchedFile.arrayBuffer());
+            }
+            const imgBuf = imgBufCache.get(matchedFile.name);
+            const ext = matchedFile.name.split('.').pop().toLowerCase();
+            const fx = pickFx(selectedFx);
+
+            const mediaId = uuid4();
+            const mediaPath = `media/${mediaId}.${ext}`;
+
+            project.files.push({
+                version: 1,
+                mediaId,
+                sourceOrigin: 'USER',
+                fileSize: imgBuf.byteLength,
+                name: `${mediaId}.${ext}`,
+                type: 'Image',
+                isTransparent: false,
+                fileLocation: 'IN_MEMORY',
+            });
+
+            zip.file(mediaPath, imgBuf);
+
+            const assetId = uuid4();
+            lastAssetId = assetId;
+
+            if (isV16) {
+                const trackId = uuid4().replace(/-/g, '').substring(0, 10);
+                project.props.tracks[trackId] = {
+                    trackId,
+                    mediaId,
+                    xPos: 0,
+                    yPos: 0,
+                    height: 1,
+                    width: 1,
+                    rotation: 0,
+                    zIndex: zIndex++,
+                    type: 'image',
+                    originalWidthHeightRatio: videoRatio,
+                    importType: 'drag_and_drop',
+                    kenburnsAnimationInfo: {
+                        type: 'custom',
+                        from: { ...fx.from },
+                        to:   { ...fx.to },
+                    },
+                    editInfo: {},
+                    stats: { fillType: 'cut', fillMenu: 'floating', rearrangeCount: 0 },
+                };
+                project.props.assets[assetId] = {
+                    trackIds: [trackId],
+                    role: 'sub',
+                };
+            } else {
+                // v14 구조: props.assets 직접
+                project.props.assets[assetId] = {
+                    mediaId,
+                    xPos: 0,
+                    yPos: 0,
+                    height: 1,
+                    width: 1,
+                    rotation: 0,
+                    zIndex: zIndex++,
+                    type: 'image',
+                    originalWidthHeightRatio: videoRatio,
+                    importType: 'user_asset_panel',
+                    kenburnsAnimationInfo: {
+                        type: 'custom',
+                        from: { ...fx.from },
+                        to:   { ...fx.to },
+                    },
+                    stats: { fillType: 'cut', fillMenu: 'floating', rearrangeCount: 0 },
+                    editInfo: {},
+                };
+            }
+
+            // clip.assetIds에 연결
+            if (!Array.isArray(clip.assetIds)) clip.assetIds = [];
+            clip.assetIds.push(assetId);
+
+            log(`  → ${selectedFx === 'random' ? '랜덤' : selectedFx} 적용`, 'i');
+        }
+
+        setProgress(85);
+
+        document.getElementById('sMatched').textContent = matchCount;
+
+        if (matchCount === 0) {
+            log('⚠ 매칭된 이미지 없음. 파일명이 자막 텍스트에 포함되어 있는지 확인하세요.', 'w');
+        }
+
+        // 7. Update project.json
+        log('project.json 업데이트 중…', 'i');
+        zip.file('project.json', JSON.stringify(project, null, 2));
+        setProgress(90);
+
+        // 8. Generate output ZIP
+        log('.vrew 파일 생성 중…', 'i');
+        const blob = await zip.generateAsync({
+            type: 'blob',
+            compression: 'DEFLATE',
+            compressionOptions: { level: 6 },
+        });
+        setProgress(100);
+
+        // 9. Download
+        const outName = vrewFile.name.replace(/\.vrew$/i, '_with_images.vrew');
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = outName;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+
+        log(`완료! "${outName}" 다운로드 시작`, 's');
+        log(`결과: ${matchCount} / ${clips.length} 클립에 이미지 삽입`, 's');
+
+        btn.textContent = '✓ 완료! 다시 생성하기';
+        btn.disabled = false;
+
+    } catch (err) {
+        log('오류: ' + err.message, 'e');
+        console.error(err);
+        btn.textContent = '⚠️ 오류 발생 – 다시 시도';
+        btn.disabled = false;
+        setProgress(0);
+    }
+}
+
+document.getElementById('genBtn').addEventListener('click', generate);
+</script>
+</body>
+</html>
