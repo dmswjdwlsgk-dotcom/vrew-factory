@@ -672,8 +672,14 @@ async function generate() {
         const imgMap = new Map();
         for (const f of sortedImages) {
             const key = hasSnums ? getMatchText(f.name) : normalize(stem(f.name));
-            if (key && !imgMap.has(key)) imgMap.set(key, f);  // 먼저 등록된 것(낮은 번호) 우선
-            log(`이미지 등록: "${f.name}" → 키 "${key}"`, key ? 'i' : 'w');
+            if (key && !imgMap.has(key)) {
+                imgMap.set(key, f);
+                log(`이미지 등록: "${f.name}" → 키 "${key}"`, 'i');
+            } else if (key && imgMap.has(key)) {
+                log(`중복 키 감지: "${f.name}" (키 "${key}"가 이미 등록됨) → hasSnums 모드에서 순서 배치`, 'w');
+            } else {
+                log(`이미지 등록 실패: "${f.name}" → 키 없음`, 'w');
+            }
         }
 
         // 5. Prepare structures
@@ -706,7 +712,11 @@ async function generate() {
         // 각 이미지의 시작 클립을 순서대로 찾고, 다음 이미지는 반드시 그 이후 클립에서만 탐색
         // 번호 있음: 원래 5자 매칭 / 번호 없음: 10자 정밀 매칭
         const matchMinLen = hasSnums ? 5 : 10;
-        const imgEntries = [...imgMap.entries()]; // [key, file] 정렬된 순서
+        // hasSnums: 중복 키 파일도 포함해 번호 순 전체 처리 (중복 키는 순서 배치)
+        // non-hasSnums: imgMap 기준 (중복 키 제거된 상태)
+        const imgEntries = hasSnums
+            ? sortedImages.map(f => [getMatchText(f.name), f])
+            : [...imgMap.entries()];
         const sNumClipBoundaries = [];
         let searchFrom = 0;
         for (const [key, file] of imgEntries) {
