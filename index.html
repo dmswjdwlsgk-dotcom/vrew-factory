@@ -418,13 +418,11 @@ function flexMatch(key, normText, minLen = 10) {
     }
     // 2차: 직접 포함
     if (key === normText) return true;  // 정확 일치는 무조건 매칭
-    // key가 normText로 시작: 파일명에 extra 텍스트 붙은 경우 (예: "1744년조선한양.열", "경빈박씨의죽음그것이")
-    // 단, normText가 key의 50% 이상 커버해야 함 — 짧은 공통 단어 오매칭 방지
-    const _startThresh = minLen <= 5 ? 2 : 8;
-    if (normText.length >= _startThresh && key.startsWith(normText) && normText.length * 2 >= key.length) return true;
     // normText.includes(key): 클립 텍스트가 이미지 키를 포함 — minLen 이상
     if (normText.length >= minLen && normText.includes(key)) return true;
-    // key.includes(normText): 이미지 키가 클립 텍스트를 포함 — 반드시 10자+ (짧은 단어 오매칭 방지)
+    // key.includes(normText): 이미지 키가 클립 텍스트를 포함
+    // 차이 3자 이내: 파일명에 ".열", "그것이" 등 소량 extra 텍스트가 붙은 경우 (오매칭 방지)
+    if (normText.length >= minLen && key.length - normText.length <= 3 && key.includes(normText)) return true;
     if (normText.length >= 10 && key.includes(normText)) return true;
     // 3차: 슬라이딩 매칭 — 창 크기 최소 SLIDE_MIN(10)자 고정 (공통 단문구 오매칭 방지)
     const effectiveMin = Math.max(SLIDE_MIN, Math.min(minLen, Math.max(5, Math.floor(koreanOnly.length * 0.6))));
@@ -454,9 +452,8 @@ function strictFlexMatch(key, normText, minLen = 10) {
     if (!normText || normText.length < 2) return false;
     const koreanOnly = key.replace(/[a-z]+/g, '');
     if (key === normText) return true;  // 정확 일치는 무조건 매칭
-    const _startThresh = minLen <= 5 ? 2 : 8;
-    if (normText.length >= _startThresh && key.startsWith(normText) && normText.length * 2 >= key.length) return true;
     if (normText.length >= minLen && normText.includes(key)) return true;
+    if (normText.length >= minLen && key.length - normText.length <= 3 && key.includes(normText)) return true;
     if (normText.length >= 10 && key.includes(normText)) return true;
     const effectiveMin = Math.max(SLIDE_MIN, Math.min(minLen, Math.max(5, Math.floor(koreanOnly.length * 0.6))));
     const maxLen = Math.min(koreanOnly.length, normText.length, 20);
@@ -725,15 +722,6 @@ async function generate() {
                 if (clipNorms[ci] && flexMatch(key, clipNorms[ci], matchMinLen)) {
                     found = ci;
                     break;
-                }
-                // 인접 두 클립 합쳐서 매칭 — 파일명이 두 클립에 걸친 경우 대응
-                // (예: "열 살. 지금으로 치면 초등" = 클립"열살" + 클립"지금으로치면초등학교...")
-                if (hasSnums && ci + 1 < clips.length && clipNorms[ci] && clipNorms[ci + 1]) {
-                    const merged = clipNorms[ci] + clipNorms[ci + 1];
-                    if (flexMatch(key, merged, matchMinLen)) {
-                        found = ci;
-                        break;
-                    }
                 }
             }
             if (found >= 0) {
