@@ -723,6 +723,16 @@ async function generate() {
                     found = ci;
                     break;
                 }
+                // 인접 두 클립 합산 매칭: 파일명이 두 클립에 걸친 경우
+                // 단, 키가 첫 번째 클립 범위 안에서 시작해야 배치 — 두 번째 클립에서만 매칭되면 직접 매칭으로 처리
+                if (hasSnums && ci + 1 < clips.length && clipNorms[ci] && clipNorms[ci + 1]) {
+                    const merged = clipNorms[ci] + clipNorms[ci + 1];
+                    const matchPos = merged.indexOf(key);
+                    if (matchPos >= 0 && matchPos < clipNorms[ci].length) {
+                        found = ci;
+                        break;
+                    }
+                }
             }
             if (found >= 0) {
                 sNumClipBoundaries.push({ file, startClipIdx: found });
