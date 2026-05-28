@@ -417,6 +417,7 @@ function flexMatch(key, normText, minLen = 10) {
         return koreanOnly.startsWith(normText);
     }
     // 2차: 직접 포함
+    if (key === normText) return true;  // 정확 일치는 무조건 매칭
     // normText.includes(key): 클립 텍스트가 이미지 키를 포함 — minLen 이상
     if (normText.length >= minLen && normText.includes(key)) return true;
     // key.includes(normText): 이미지 키가 클립 텍스트를 포함 — 반드시 10자+ (짧은 단어 오매칭 방지)
@@ -448,6 +449,7 @@ function flexMatch(key, normText, minLen = 10) {
 function strictFlexMatch(key, normText, minLen = 10) {
     if (!normText || normText.length < 2) return false;
     const koreanOnly = key.replace(/[a-z]+/g, '');
+    if (key === normText) return true;  // 정확 일치는 무조건 매칭
     if (normText.length >= minLen && normText.includes(key)) return true;
     if (normText.length >= 10 && key.includes(normText)) return true;
     const effectiveMin = Math.max(SLIDE_MIN, Math.min(minLen, Math.max(5, Math.floor(koreanOnly.length * 0.6))));
@@ -664,7 +666,7 @@ async function generate() {
         const imgMap = new Map();
         for (const f of sortedImages) {
             const key = hasSnums ? getMatchText(f.name) : normalize(stem(f.name));
-            if (key) imgMap.set(key, f);
+            if (key && !imgMap.has(key)) imgMap.set(key, f);  // 먼저 등록된 것(낮은 번호) 우선
             log(`이미지 등록: "${f.name}" → 키 "${key}"`, key ? 'i' : 'w');
         }
 
